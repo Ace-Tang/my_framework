@@ -1,9 +1,8 @@
 package scheduler
 
 import (
-	"flag"
 	"log"
-	"net"
+	"strconv"
 
 	"github.com/gogo/protobuf/proto"
 	mesos "github.com/mesos/mesos-go/mesosproto"
@@ -14,8 +13,8 @@ import (
 type Myscheduler struct {
 	imageName   string
 	executor    *mesos.ExecutorInfo
-	taskRunning []string
-	taskPending []string
+	taskRunning int
+	taskPending int
 	taskTotal   int
 	cpuPerTask  float64
 	memPerTask  float64
@@ -23,11 +22,13 @@ type Myscheduler struct {
 
 func NewMyScheduler(imageName string, cpus, mem float64) *Myscheduler {
 	return &Myscheduler{
-		imageName:  imageName,
-		executor:   &mesos.ExecutorInfo{},
-		taskTotal:  0,
-		cpuPerTask: cpus,
-		memPerTask: mem,
+		imageName:   imageName,
+		executor:    &mesos.ExecutorInfo{},
+		taskRunning: 0,
+		taskPending: 0,
+		taskTotal:   0,
+		cpuPerTask:  cpus,
+		memPerTask:  mem,
 	}
 }
 
@@ -47,31 +48,44 @@ func (mysched *Myscheduler) ResourceOffers(driver sched.SchedulerDriver, offers 
 	log.Printf("receiced %d offers", len(offers))
 
 	for _, offer := range offers {
-		remainingCpus := getOfferCpu(offer)
-		remainingMem := getOfferMem(off)
+		remainingCpus := 0.0
+		remainingMem := 0.0
+		cpuRes := mesosutil.FilterResources(offer.Resources, func(res *mesos.Resource) bool {
+			return res.GetName() == "cpus"
+		})
+		for _, cpus := range cpuRes {
+			remainingCpus += cpus.GetScalar().GetValue()
+		}
+		memRes := mesosutil.FilterResources(offer.Resources, func(res *mesos.Resource) bool {
+			return res.GetName() == "mem"
+		})
+		for _, mem := range memRes {
+			remainingMem += mem.GetScalar().GetValue()
+		}
 
 		var tasks []*mesos.TaskInfo
 		for mysched.cpuPerTask <= remainingCpus &&
 			mysched.memPerTask <= remainingMem &&
-			len(mysched.taskRunning)+len(mysched.taskPending) < mysched.taskTotal {
+			mysched.taskRunning+mysched.taskPending < mysched.taskTotal {
 			taskId := &mesos.TaskID{
-				Value: proto.String( /*id*/),
+				Value: proto.String(strconv.Itoa(mysched.taskRunning)),
 			}
 
-			taskPending = append(taskPending, taskId.GetValue())
+			mysched.taskPending++
 
 			//set dockerInfo and containerinfo
-			docker := &mesos.DockerInfo{
+			docker := &mesos.ContainerInfo_DockerInfo{
 				Image: proto.String(mysched.imageName),
 			}
 
+			dockerTye := mesos.ContainerInfo_DOCKER
 			container := &mesos.ContainerInfo{
-				Type:   mesos.DOCKER.enum(),
+				Type:   &dockerTye,
 				Docker: docker,
 			}
 
 			command := &mesos.CommandInfo{
-				Shell: proto.String("false"),
+				Shell: proto.Bool(false),
 			}
 
 			log.Printf("task %s pending\n", taskId.GetValue())
@@ -95,9 +109,9 @@ func (mysched *Myscheduler) ResourceOffers(driver sched.SchedulerDriver, offers 
 		}
 		log.Printf("Launching %d task for offer %v\n", len(tasks), offer.Id.GetValue())
 		filter := &mesos.Filters{
-			RefuseSeconds: proto.float64(1),
+			RefuseSeconds: proto.Float64(1),
 		}
-		driver.LaunchTasks(offer.Id, tasks, filter)
+		driver.LaunchTasks([]*mesos.OfferID{offer.Id}, tasks, filter)
 	}
 }
 
@@ -108,17 +122,19 @@ func (mysched *Myscheduler) OfferRescinded(_ sched.SchedulerDriver, offerId *mes
 func (mysched *Myscheduler) StatusUpdate(_ sched.SchedulerDriver, status *mesos.TaskStatus) {
 	taskStatus := status.GetState()
 
-	if taskStatus == mesos.TaskState_Task_KILLED ||
-		taskStatus == mesos.TaskState_Task_LOST ||
-		taskStatus == mesos.TaskState_Task_FAILED {
-		log.Infof("Abort Task %v in state %v with message %v\n", status.TaskId.GetValue(), status.State.String(), status.GetMessage())
+	if taskStatus == mesos.TaskState_TASK_KILLED ||
+		taskStatus == mesos.TaskState_TASK_LOST ||
+		taskStatus == mesos.TaskState_TASK_FAILED {
+		log.Printf("Abort Task %v in state %v with message %v\n", status.TaskId.GetValue(), status.State.String(), status.GetMessage())
 	}
 
 	switch taskStatus {
-	case mesos.TaskState_Task_RUNNING:
-	case mesos.TaskState_Task_FINISHED:
-		mysched.taskFinished++
-		log.Infof("task %v finished\n", status.TaskId.GetValue())
+	case mesos.TaskState_TASK_RUNNING:
+		mysched.taskPending--
+		mysched.taskRunning++
+	case mesos.TaskState_TASK_FINISHED:
+		mysched.taskTotal++
+		log.Printf("task %v finished\n", status.TaskId.GetValue())
 	}
 }
 
@@ -137,4 +153,8 @@ func (mysched *Myscheduler) ExecutorLost(_ sched.SchedulerDriver, executorId *me
 
 func (mysched *Myscheduler) Error(_ sched.SchedulerDriver, message string) {
 	log.Printf("Get error, ", message)
+}
+
+func getOfferCpu() {
+
 }

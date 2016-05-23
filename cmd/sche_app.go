@@ -8,7 +8,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	sched "github.com/mesos/mesos-go/scheduler"
-	scheduler "scheduler/sched"
+	scheduler "scheduler"
 )
 
 var (
@@ -38,7 +38,7 @@ func main() {
 		},
 		Master:         *master,
 		BindingAddress: bindingAddress,
-		BindingPort:    bindingPort,
+//		BindingPort:    bindingPort,
 	})
 
 	if err != nil {
