@@ -1,160 +1,191 @@
 package scheduler
 
 import (
-	"log"
 	"strconv"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
+	log "github.com/golang/glog"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	"github.com/mesos/mesos-go/mesosutil"
 	sched "github.com/mesos/mesos-go/scheduler"
+	store "my_framework/store"
+	"my_framework/types"
+)
+
+var (
+	filter = &mesos.Filters{
+		RefuseSeconds: proto.Float64(1),
+	}
 )
 
 type Myscheduler struct {
-	imageName   string
-	executor    *mesos.ExecutorInfo
-	taskRunning int
-	taskPending int
-	taskTotal   int
-	cpuPerTask  float64
-	memPerTask  float64
+	taskTotal    int
+	taskFrontEnd string
+	start        chan string
+	//	shutdown chan
+	db *store.Storage
 }
 
-func NewMyScheduler(imageName string, cpus, mem float64) *Myscheduler {
+func NewMyScheduler(db *store.Storage) *Myscheduler {
 	return &Myscheduler{
-		imageName:   imageName,
-		executor:    &mesos.ExecutorInfo{},
-		taskRunning: 0,
-		taskPending: 0,
-		taskTotal:   0,
-		cpuPerTask:  cpus,
-		memPerTask:  mem,
+		taskTotal:    0,
+		taskFrontEnd: strconv.FormatInt(time.Now().Unix(), 32),
+		start:        make(chan string, 1000),
+		db:           db,
+		//shutdown:
 	}
 }
 
 func (mysched *Myscheduler) Registered(_ sched.SchedulerDriver, frameworkId *mesos.FrameworkID, masterInfo *mesos.MasterInfo) {
-	log.Printf("scheduler register mesos with framework id %s, master id %s", frameworkId.GetValue(), masterInfo.GetId())
+	log.Infoln("scheduler register mesos with framework id %s, master id %s", frameworkId.GetValue(), masterInfo.GetId())
 }
 
 func (mysched *Myscheduler) Reregistered(_ sched.SchedulerDriver, masterInfo *mesos.MasterInfo) {
-	log.Printf("scheduler reregister mesos ", masterInfo)
+	log.Infoln("scheduler reregister mesos ", masterInfo)
 }
 
 func (mysched *Myscheduler) Disconnected(driver sched.SchedulerDriver) {
-	log.Printf("scheduler Disconnect with master")
+	log.Infoln("scheduler Disconnect with master")
 }
 
 func (mysched *Myscheduler) ResourceOffers(driver sched.SchedulerDriver, offers []*mesos.Offer) {
-	log.Printf("receiced %d offers", len(offers))
+	log.Infof("receive %d offers\n", len(offers))
 
-	for _, offer := range offers {
-		remainingCpus := 0.0
-		remainingMem := 0.0
-		cpuRes := mesosutil.FilterResources(offer.Resources, func(res *mesos.Resource) bool {
-			return res.GetName() == "cpus"
-		})
-		for _, cpus := range cpuRes {
-			remainingCpus += cpus.GetScalar().GetValue()
-		}
-		memRes := mesosutil.FilterResources(offer.Resources, func(res *mesos.Resource) bool {
-			return res.GetName() == "mem"
-		})
-		for _, mem := range memRes {
-			remainingMem += mem.GetScalar().GetValue()
-		}
+loop:
+	for len(offers) > 0 {
 
 		var tasks []*mesos.TaskInfo
-		for mysched.cpuPerTask <= remainingCpus &&
-			mysched.memPerTask <= remainingMem &&
-			mysched.taskRunning+mysched.taskPending < mysched.taskTotal {
-			taskId := &mesos.TaskID{
-				Value: proto.String(strconv.Itoa(mysched.taskRunning)),
+
+		select {
+		case tid := <-mysched.start:
+			task, err := mysched.db.GetTask(tid)
+			if err != nil {
+				log.Errorf("unable to find task %v in db\n", tid)
+			}
+			log.Infof("try to launching task %s on slave %s", tid, task.Hostname)
+
+			var ok int = 0
+			var offer *mesos.Offer
+			for _, offer = range offers {
+				remainingCpus := getOfferRes("cpus", offer)
+				remainingMem := getOfferRes("mem", offer)
+				log.Infof("receiced offer %v with cpus %v, memory %v\n", offer.Id.GetValue(), remainingCpus, remainingMem)
+
+				if *(offer.Hostname) == task.Hostname &&
+					int(remainingCpus) > int(task.TaskCpu)*task.Count &&
+					int(remainingMem) > int(task.TaskMem)*task.Count {
+					ok = 1
+					break
+				}
 			}
 
-			mysched.taskPending++
-
-			//set dockerInfo and containerinfo
-			docker := &mesos.ContainerInfo_DockerInfo{
-				Image: proto.String(mysched.imageName),
+			if ok == 0 {
+				log.Warningf("task %s cannot launing on slave %s\n", task.ID, task.Hostname)
+				go func() {
+					mysched.start <- tid
+				}()
+				break loop
 			}
 
-			dockerTye := mesos.ContainerInfo_DOCKER
-			container := &mesos.ContainerInfo{
-				Type:   &dockerTye,
-				Docker: docker,
+			t, taskInfo := CreateTaskInfo(offer, task)
+			log.Infof("%d task %s pending\n", t.Count, t.ID)
+			mysched.db.UpdateTask(t.ID, t.SlaveId, t.FrameworkId)
+			//add in store, queue
+			for i := 0; i < task.Count; i++ {
+				tasks = append(tasks, taskInfo)
 			}
+			log.Infof("Launching task %s for offer %v\n", task.ID, offer.Id.GetValue())
+			driver.LaunchTasks([]*mesos.OfferID{offer.Id}, tasks, filter)
+			mysched.taskTotal++
 
-			command := &mesos.CommandInfo{
-				Shell: proto.Bool(false),
-			}
-
-			log.Printf("task %s pending\n", taskId.GetValue())
-			task := &mesos.TaskInfo{
-				Name:     proto.String("ace-task" + taskId.GetValue()),
-				TaskId:   taskId,
-				SlaveId:  offer.SlaveId,
-				Executor: mysched.executor,
-				Resources: []*mesos.Resource{
-					mesosutil.NewScalarResource("cpus", mysched.cpuPerTask),
-					mesosutil.NewScalarResource("mem", mysched.memPerTask),
-				},
-				Container: container,
-				Command:   command,
-			}
-
-			tasks = append(tasks, task)
-			remainingCpus -= mysched.cpuPerTask
-			remainingMem -= mysched.memPerTask
-
+			continue
+		default:
+			break loop
 		}
-		log.Printf("Launching %d task for offer %v\n", len(tasks), offer.Id.GetValue())
-		filter := &mesos.Filters{
-			RefuseSeconds: proto.Float64(1),
-		}
-		driver.LaunchTasks([]*mesos.OfferID{offer.Id}, tasks, filter)
+
+	}
+	log.Infoln("no task run, decline offers")
+	for _, offer := range offers {
+		driver.DeclineOffer(offer.Id, filter)
 	}
 }
 
 func (mysched *Myscheduler) OfferRescinded(_ sched.SchedulerDriver, offerId *mesos.OfferID) {
-	log.Printf("offer %s rescind", offerId)
+	log.Infoln("offer %s rescind", offerId)
 }
 
 func (mysched *Myscheduler) StatusUpdate(_ sched.SchedulerDriver, status *mesos.TaskStatus) {
 	taskStatus := status.GetState()
+	id := status.TaskId.GetValue()
 
+	_, err := mysched.db.GetTask(id)
+	if err != nil {
+		log.Errorf("unable to find task %v in db\n", id)
+	}
+
+	state := status.State.String()
 	if taskStatus == mesos.TaskState_TASK_KILLED ||
 		taskStatus == mesos.TaskState_TASK_LOST ||
 		taskStatus == mesos.TaskState_TASK_FAILED {
-		log.Printf("Abort Task %v in state %v with message %v\n", status.TaskId.GetValue(), status.State.String(), status.GetMessage())
+		log.Infof("Abort Task %v in state %v with message %v\n", status.TaskId.GetValue(), state, status.GetMessage())
 	}
 
 	switch taskStatus {
 	case mesos.TaskState_TASK_RUNNING:
-		mysched.taskPending--
-		mysched.taskRunning++
+		//mysched.taskPending--
+		//mysched.taskRunning++
+		log.Infoln("task %v running\n", status.TaskId.GetValue())
 	case mesos.TaskState_TASK_FINISHED:
-		mysched.taskTotal++
-		log.Printf("task %v finished\n", status.TaskId.GetValue())
+		//mysched.taskTotal++
+		//mysched.taskRunning--
+		log.Infoln("task %v finished\n", status.TaskId.GetValue())
 	}
+	mysched.db.UpdateTaskStatus(id, state)
 }
 
 func (mysched *Myscheduler) FrameworkMessage(_ sched.SchedulerDriver, executorId *mesos.ExecutorID, slaveId *mesos.SlaveID, data string) {
-	log.Printf("get framework info\n")
-	log.Printf("using executor %s, in slave %s\n", executorId, slaveId)
+	log.Infoln("get framework info")
+	log.Infof("using executor %s, in slave %s\n", executorId, slaveId)
 }
 
 func (mysched *Myscheduler) SlaveLost(_ sched.SchedulerDriver, slaveId *mesos.SlaveID) {
-	log.Printf("slave is lost with ID %s", slaveId)
+	log.Errorf("slave is lost with ID %s", slaveId)
 }
 
 func (mysched *Myscheduler) ExecutorLost(_ sched.SchedulerDriver, executorId *mesos.ExecutorID, slaveId *mesos.SlaveID, status int) {
-	log.Printf("executor is lost with id %s, in slave slaveId", executorId, slaveId)
+	log.Errorf("executor is lost with id %s, in slave slaveId", executorId, slaveId)
 }
 
 func (mysched *Myscheduler) Error(_ sched.SchedulerDriver, message string) {
-	log.Printf("Get error, ", message)
+	log.Errorln("Get error, ", message)
 }
 
-func getOfferCpu() {
+func getOfferRes(name string, offer *mesos.Offer) float64 {
+	ress := mesosutil.FilterResources(offer.Resources, func(res *mesos.Resource) bool {
+		return res.GetName() == name
+	})
+
+	val := 0.0
+	for _, res := range ress {
+		val += res.GetScalar().GetValue()
+	}
+
+	return val
+}
+
+func (mysched *Myscheduler) SchedulerTask(req *types.TaskRequest) {
+	task := NewMyTask(req, mysched.taskTotal, mysched.taskFrontEnd)
+	log.Infof("receive task %s , add %s to queue\n", task.Name, task.ID)
+
+	select {
+	case mysched.start <- task.ID:
+		mysched.db.PutTask(task)
+		//store,queue
+		//return task.ID, nil
+	}
+}
+
+func (mysched *Myscheduler) Stop() {
 
 }
