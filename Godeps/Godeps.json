@@ -1,0 +1,127 @@
+{
+	"ImportPath": "my_framework",
+	"GoVersion": "go1.6",
+	"GodepVersion": "v69",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/emicklei/go-restful",
+			"Comment": "v1.2-55-gceb1e01",
+			"Rev": "ceb1e013549944e3cc37f24753f9d86366505ee1"
+		},
+		{
+			"ImportPath": "github.com/emicklei/go-restful/log",
+			"Comment": "v1.2-55-gceb1e01",
+			"Rev": "ceb1e013549944e3cc37f24753f9d86366505ee1"
+		},
+		{
+			"ImportPath": "github.com/emicklei/go-restful/swagger",
+			"Comment": "v1.2-55-gceb1e01",
+			"Rev": "ceb1e013549944e3cc37f24753f9d86366505ee1"
+		},
+		{
+			"ImportPath": "github.com/go-sql-driver/mysql",
+			"Comment": "v1.2-194-g7ebe0a5",
+			"Rev": "7ebe0a500653eeb1859664bed5e48dec1e164e73"
+		},
+		{
+			"ImportPath": "github.com/gogo/protobuf/proto",
+			"Comment": "v0.2-17-gc18eea6",
+			"Rev": "c18eea6ad611eecf94a9ba38471f59706199409e"
+		},
+		{
+			"ImportPath": "github.com/golang/glog",
+			"Rev": "23def4e6c14b4da8ac2ed8007337bc5eb5007998"
+		},
+		{
+			"ImportPath": "github.com/mesos/mesos-go/auth",
+			"Comment": "before-0.26-protos-35-g7064d87",
+			"Rev": "7064d8760d60f029f568b9295e6842612e89e347"
+		},
+		{
+			"ImportPath": "github.com/mesos/mesos-go/auth/callback",
+			"Comment": "before-0.26-protos-35-g7064d87",
+			"Rev": "7064d8760d60f029f568b9295e6842612e89e347"
+		},
+		{
+			"ImportPath": "github.com/mesos/mesos-go/auth/sasl",
+			"Comment": "before-0.26-protos-35-g7064d87",
+			"Rev": "7064d8760d60f029f568b9295e6842612e89e347"
+		},
+		{
+			"ImportPath": "github.com/mesos/mesos-go/auth/sasl/mech",
+			"Comment": "before-0.26-protos-35-g7064d87",
+			"Rev": "7064d8760d60f029f568b9295e6842612e89e347"
+		},
+		{
+			"ImportPath": "github.com/mesos/mesos-go/auth/sasl/mech/crammd5",
+			"Comment": "before-0.26-protos-35-g7064d87",
+			"Rev": "7064d8760d60f029f568b9295e6842612e89e347"
+		},
+		{
+			"ImportPath": "github.com/mesos/mesos-go/detector",
+			"Comment": "before-0.26-protos-35-g7064d87",
+			"Rev": "7064d8760d60f029f568b9295e6842612e89e347"
+		},
+		{
+			"ImportPath": "github.com/mesos/mesos-go/detector/zoo",
+			"Comment": "before-0.26-protos-35-g7064d87",
+			"Rev": "7064d8760d60f029f568b9295e6842612e89e347"
+		},
+		{
+			"ImportPath": "github.com/mesos/mesos-go/mesosproto",
+			"Comment": "before-0.26-protos-35-g7064d87",
+			"Rev": "7064d8760d60f029f568b9295e6842612e89e347"
+		},
+		{
+			"ImportPath": "github.com/mesos/mesos-go/mesosproto/scheduler",
+			"Comment": "before-0.26-protos-35-g7064d87",
+			"Rev": "7064d8760d60f029f568b9295e6842612e89e347"
+		},
+		{
+			"ImportPath": "github.com/mesos/mesos-go/mesosutil",
+			"Comment": "before-0.26-protos-35-g7064d87",
+			"Rev": "7064d8760d60f029f568b9295e6842612e89e347"
+		},
+		{
+			"ImportPath": "github.com/mesos/mesos-go/mesosutil/process",
+			"Comment": "before-0.26-protos-35-g7064d87",
+			"Rev": "7064d8760d60f029f568b9295e6842612e89e347"
+		},
+		{
+			"ImportPath": "github.com/mesos/mesos-go/messenger",
+			"Comment": "before-0.26-protos-35-g7064d87",
+			"Rev": "7064d8760d60f029f568b9295e6842612e89e347"
+		},
+		{
+			"ImportPath": "github.com/mesos/mesos-go/messenger/sessionid",
+			"Comment": "before-0.26-protos-35-g7064d87",
+			"Rev": "7064d8760d60f029f568b9295e6842612e89e347"
+		},
+		{
+			"ImportPath": "github.com/mesos/mesos-go/scheduler",
+			"Comment": "before-0.26-protos-35-g7064d87",
+			"Rev": "7064d8760d60f029f568b9295e6842612e89e347"
+		},
+		{
+			"ImportPath": "github.com/mesos/mesos-go/upid",
+			"Comment": "before-0.26-protos-35-g7064d87",
+			"Rev": "7064d8760d60f029f568b9295e6842612e89e347"
+		},
+		{
+			"ImportPath": "github.com/pborman/uuid",
+			"Comment": "v1.0-11-gc55201b",
+			"Rev": "c55201b036063326c5b1b89ccfe45a184973d073"
+		},
+		{
+			"ImportPath": "github.com/samuel/go-zookeeper/zk",
+			"Rev": "6eb1b09c6ce23f305f4c81bf748b22fbc6f3f9e9"
+		},
+		{
+			"ImportPath": "golang.org/x/net/context",
+			"Rev": "0c607074acd38c5f23d1344dfe74c977464d1257"
+		}
+	]
+}
