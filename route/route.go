@@ -3,26 +3,28 @@ package route
 import (
 	"github.com/emicklei/go-restful"
 	_ "github.com/emicklei/go-restful/swagger"
-	log "github.com/golang/glog"
-	sched "my_framework/scheduler"
+	_ "github.com/golang/glog"
+	"log"
 	"my_framework/store" //has mysql
 	"my_framework/types"
 	"net/http"
 )
 
 type RouteManage struct {
-	db *store.Storage
+	db    *store.Storage
+	sched types.Scheduler
 }
 
-func NewRouteManage(db *store.Storage) *RouteManage {
+func NewRouteManage(db *store.Storage, mysched types.Scheduler) *RouteManage {
 	return &RouteManage{
-		db: db,
+		db:    db,
+		sched: mysched,
 	}
 }
 
-func (r *RouteManage) ContainerRegister(h Hander) {
-	r.RegisterTask(h.container)
-	r.RegisterSlave(h.container)
+func (r *RouteManage) ContainerRegister(h *Hander) {
+	r.RegisterTask(h.Container)
+	r.RegisterSlave(h.Container)
 }
 
 func (r *RouteManage) RegisterTask(c *restful.Container) {
@@ -39,15 +41,15 @@ func (r *RouteManage) RegisterTask(c *restful.Container) {
 
 	ws.Route(ws.GET("").To(r.lsTask).
 		Operation("lsTask").
-		Param(ws.PathParameter("hostname", "identifier of the slave node")).DataType("string"))
+		Param(ws.PathParameter("hostname", "identifier of the slave node").DataType("string")))
 
 	ws.Route(ws.GET("/{name}").To(r.descTask).
 		Operation("descTask").
-		Param(ws.PathParameter("name", "identifier of task")).DataType("string"))
+		Param(ws.PathParameter("name", "identifier of task").DataType("string")))
 
 	ws.Route(ws.DELETE("/{id}").To(r.rmTask).
 		Operation("rmTask").
-		Param(PathParameter("id", "identifier of task")).DataType("string"))
+		Param(ws.PathParameter("id", "identifier of task").DataType("string")))
 
 	c.Add(ws)
 }
@@ -61,7 +63,7 @@ func (r *RouteManage) addTask(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	sched.ScheduleTask(&taskReq)
+	r.sched.ScheduleTask(&taskReq)
 
 }
 
@@ -72,7 +74,7 @@ type ls_tasks struct {
 func (r *RouteManage) lsTask(req *restful.Request, resp *restful.Response) {
 	hostname := req.QueryParameter("hostname")
 
-	ts := &types.SlaveNode{}
+	ts := []*types.MyTask{}
 	if len(hostname) == 0 {
 		ts = r.db.ListTask(hostname)
 
@@ -85,7 +87,7 @@ func (r *RouteManage) lsTask(req *restful.Request, resp *restful.Response) {
 
 	if err != nil {
 		resp.AddHeader("Context-Type", "text/plain")
-		resp.WriteErrorString(http, StatusInternalServerError, err.Error())
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
 	}
 }
@@ -114,18 +116,18 @@ func (r *RouteManage) RegisterSlave(c *restful.Container) {
 	ws := new(restful.WebService)
 	ws.
 		Path("/slaves").
-		Consumes(rrestful.MIME_JSON).
+		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
 
-	ws.Route(ws.POST("").To(s.addSlaves).
+	ws.Route(ws.POST("").To(r.addSlaves).
 		Operation("addSlaves").
-		Reads(add_slave{}))
+		Reads(types.SlaveNode{}))
 
-	ws.Route(ws.GET("").To(s.lsSlaves).
+	ws.Route(ws.GET("").To(r.lsSlaves).
 		Operation("lsSlaves").
 		Param(ws.PathParameter("hostname", "identifier of the slave node").DataType("string")))
 
-	ws.Route(ws.DELETE("/{hostname}").To(s.rmSlave).
+	ws.Route(ws.DELETE("/{hostname}").To(r.rmSlave).
 		Operation("rmSlave").
 		Param(ws.PathParameter("hostname", "identifier of the slave node").DataType("string")))
 
@@ -141,7 +143,7 @@ func (r *RouteManage) addSlaves(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	log.Infoln("add node to my_framework ", args)
+	log.Println("add node to my_framework ", args)
 	r.db.AddNode(&args)
 }
 

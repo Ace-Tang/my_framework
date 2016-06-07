@@ -2,26 +2,28 @@ package route
 
 import (
 	"github.com/emicklei/go-restful"
+	_ "github.com/golang/glog"
+	"log"
 	"net/http"
 )
 
 type Hander struct {
-	addr      string
-	container *restful.Container
+	Addr      string
+	Container *restful.Container
 }
 
 func NewHander(addr string) *Hander {
 	return &Hander{
-		addr:      addr,
-		container: restful.NewContainer(),
+		Addr:      addr,
+		Container: restful.NewContainer(),
 	}
 }
 
 func (h *Hander) HanderServer() {
-	log.Infoln("start to listen on ", addr)
+	log.Println("start to listen on ", h.Addr)
 	server := &http.Server{
-		Addr:    h.addr,
-		Handler: h.container,
+		Addr:    h.Addr,
+		Handler: h.Container,
 	}
-	log.Fatal(server.ListenAndServe())
+	log.Println(server.ListenAndServe())
 }

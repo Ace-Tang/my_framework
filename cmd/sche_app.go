@@ -2,16 +2,14 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	_ "github.com/golang/glog"
 	"log"
-	"net"
-
-	"github.com/gogo/protobuf/proto"
-	//mesos "github.com/mesos/mesos-go/mesosproto"
-	sched "github.com/mesos/mesos-go/scheduler"
 	"my_framework/route"
 	scheduler "my_framework/scheduler"
 	"my_framework/store"
 	"my_framework/types"
+	"os"
 )
 
 var (
@@ -21,7 +19,7 @@ var (
 	webui   = flag.String("webui", "localhost:8080", "webui address")
 	name    = flag.String("name", "april", "framework name")
 	user    = flag.String("user", "root", "who can use framework")
-	db      = flag.String("db", "root@ace/mesos", "location of db")
+	db      = flag.String("db", "root@ace(127.0.0.1:3306)/mesos", "location of db")
 )
 
 func main() {
@@ -64,10 +62,12 @@ func main() {
 	storage := store.NewStorage(*db)
 	err := storage.Open()
 	if err != nil {
-		log.Errorln("open mysql ", err)
+		log.Println("open mysql ", err)
 		os.Exit(-1)
 	}
-	log.Infoln("open database on ", *db)
+	fmt.Println("after db")
+	log.Println("open mysql ", err)
+	log.Println("open database on ", *db)
 	defer storage.Close()
 
 	cfg := &types.Config{
@@ -77,10 +77,10 @@ func main() {
 		Webui:   *webui,
 		Name:    *name,
 		User:    *user,
-		Db:      storage,
+		//Db:      storage,
 	}
 
-	mysched := scheduler.NewMyScheduler()
+	mysched := scheduler.NewMyScheduler(storage)
 	go func() {
 		scheduler.RunScheduler(mysched, cfg)
 		//close other
@@ -98,9 +98,9 @@ func main() {
 	//}()
 
 	hander := route.NewHander(*webui)
-	routeM := route.NewRouteManage(storage)
+	routeM := route.NewRouteManage(storage, mysched)
 
-	routeM.ContainerRegister(hander.container)
+	routeM.ContainerRegister(hander)
 	hander.HanderServer()
 
 }

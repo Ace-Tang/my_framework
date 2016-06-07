@@ -3,9 +3,9 @@ package store
 import (
 	"database/sql"
 	_ "errors"
-	"fmt"
 	_ "github.com/go-sql-driver/mysql"
-	log "github.com/golang/glog"
+	_ "github.com/golang/glog"
+	"log"
 	"my_framework/types"
 )
 
@@ -28,7 +28,7 @@ func (s *Storage) Open() error {
 
 	var err error
 	s.db, err = sql.Open("mysql", s.addr)
-	fmt.Println("in open , ", s.db)
+	log.Println("in open , ", s.db)
 	if err != nil {
 		s.db = nil
 	}
@@ -51,7 +51,7 @@ func (s *Storage) AddNode(n *types.SlaveNode) {
 	//_, err = stmt.Exec(hostname, attachment)
 
 	if err != nil {
-		log.Errorln("insert to table slave_info : ", err)
+		log.Println("insert to table slave_info : ", err)
 	}
 }
 
@@ -60,7 +60,7 @@ func (s *Storage) LsNode() []*types.SlaveNode {
 
 	rows, err := s.db.Query(sql)
 	if err != nil {
-		log.Errorln("select from db : ", err)
+		log.Println("select from db : ", err)
 	}
 	nodes := []*types.SlaveNode{}
 	for rows.Next() {
@@ -77,7 +77,7 @@ func (s *Storage) DescNode(hostname string) *types.SlaveNode {
 
 	rows, err := s.db.Query(sql, hostname)
 	if err != nil {
-		log.Errorln("select slave_info from db ", err)
+		log.Println("select slave_info from db ", err)
 		return nil
 	}
 
@@ -93,7 +93,7 @@ func (s *Storage) RmNode(hostname string) {
 	sql := "delete from `slave_info` where `hostname`=?;"
 	_, err := s.db.Exec(sql, hostname)
 	if err != nil {
-		log.Errorln("delete from db : ", err)
+		log.Println("delete from db : ", err)
 	}
 }
 
@@ -103,7 +103,7 @@ func (s *Storage) PutTask(t *types.MyTask) {
 
 	_, err := s.db.Exec(sql, t.TaskCpu, t.TaskMem, t.ID, t.Cmd, t.Image, t.SlaveId, t.Hostname, t.Name, t.FrameworkId, t.Status, t.Count)
 	if err != nil {
-		log.Errorln("insert to table slave_info : ", err)
+		log.Println("insert to table slave_info : ", err)
 	}
 }
 
@@ -119,7 +119,7 @@ func (s *Storage) GetTask(id string) (*types.MyTask, error) {
 	sql := "select `id`, `hostname`, `task_cpu`, `task_mem`, `count` from `task_info` where `id`=?;"
 	rows, err := s.db.Query(sql, id)
 	if err != nil {
-		log.Errorln("GetTask from db ", err)
+		log.Println("GetTask from db ", err)
 		return nil, err
 	}
 	t := &types.MyTask{}
@@ -135,7 +135,7 @@ func (s *Storage) ListAllTask() []*types.MyTask {
 	rows, err := s.db.Query(sql)
 
 	if err != nil {
-		log.Errorln("select from task_info ", err)
+		log.Println("select from task_info ", err)
 		return nil
 	}
 	tasks := []*types.MyTask{}
@@ -152,7 +152,7 @@ func (s *Storage) ListTask(hostname string) []*types.MyTask {
 	rows, err := s.db.Query(sql, hostname)
 
 	if err != nil {
-		log.Errorln("select from task_info ", err)
+		log.Println("select from task_info ", err)
 		return nil
 	}
 
@@ -170,7 +170,7 @@ func (s *Storage) DescTask(name string) *types.MyTask {
 
 	rows, err := s.db.Query(sql, name)
 	if err != nil {
-		log.Errorln("select from db : ", err)
+		log.Println("select from db : ", err)
 	}
 	ts := &types.MyTask{}
 	for rows.Next() {
@@ -185,6 +185,6 @@ func (s *Storage) RmTask(id string) {
 
 	_, err := s.db.Exec(sql, id)
 	if err != nil {
-		log.Errorf("delete task %s :%v\n", id, err)
+		log.Printf("delete task %s :%v\n", id, err)
 	}
 }
