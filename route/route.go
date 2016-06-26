@@ -12,7 +12,7 @@ import (
 
 type RouteManage struct {
 	db    *store.Storage
-	sched types.Scheduler
+	sched types.Scheduler //Scheduler.go already has this package, so we use interface
 }
 
 func NewRouteManage(db *store.Storage, mysched types.Scheduler) *RouteManage {

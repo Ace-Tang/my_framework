@@ -33,10 +33,10 @@ func RunScheduler(mysched *Myscheduler, cfg *types.Config) {
 		os.Exit(-1)
 	}
 
-	//go func() {
-	//	<-mysched.shutdown
-	//	driver.Stop(false)
-	//}()
+	go func() {
+		<-mysched.shutdown
+		driver.Stop(true)
+	}()
 
 	if stat, err := driver.Run(); err != nil {
 		log.Println("Framework stop with Status %s and err %s\n", stat.String(), err.Error())

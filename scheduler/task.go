@@ -4,6 +4,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	"github.com/mesos/mesos-go/mesosutil"
+	"log"
 	"my_framework/types"
 	"strconv"
 	"time"
@@ -12,7 +13,7 @@ import (
 func NewMyTask(req *types.TaskRequest, taskTotal int, taskFrontEnd string) *types.MyTask {
 	taskBackEnd := strconv.FormatInt(time.Now().Unix(), 8)
 	return &types.MyTask{
-		ID:       taskFrontEnd + taskBackEnd + strconv.Itoa(taskTotal),
+		ID:       taskFrontEnd + "-" + taskBackEnd + "-" + strconv.Itoa(taskTotal),
 		TaskCpu:  req.Cpu,
 		TaskMem:  req.Mem,
 		Cmd:      req.Cmd,
@@ -27,6 +28,7 @@ func NewMyTask(req *types.TaskRequest, taskTotal int, taskFrontEnd string) *type
 
 func CreateTaskInfo(offer *mesos.Offer, task *types.MyTask) (*types.MyTask, *mesos.TaskInfo) {
 	//	task.Hostname = *offer.Hostname
+	log.Printf("task : %+v\n", task)
 	task.SlaveId = offer.SlaveId.GetValue()
 	task.FrameworkId = offer.FrameworkId.GetValue()
 
@@ -35,17 +37,22 @@ func CreateTaskInfo(offer *mesos.Offer, task *types.MyTask) (*types.MyTask, *mes
 	}
 
 	var env []*mesos.Environment_Variable
-	for k, v := range task.Env {
-		env = append(env, &mesos.Environment_Variable{
-			Name:  proto.String(k),
-			Value: proto.String(v),
-		})
-	}
+	var commandInfo *mesos.CommandInfo
+	if len(task.Env) > 0 {
+		for k, v := range task.Env {
+			env = append(env, &mesos.Environment_Variable{
+				Name:  proto.String(k),
+				Value: proto.String(v),
+			})
+		}
 
-	commandInfo := &mesos.CommandInfo{
-		Environment: &mesos.Environment{
-			Variables: env,
-		},
+		commandInfo = &mesos.CommandInfo{
+			Environment: &mesos.Environment{
+				Variables: env,
+			},
+		}
+	} else {
+		commandInfo = &mesos.CommandInfo{}
 	}
 
 	if task.Cmd == "" {
@@ -61,7 +68,7 @@ func CreateTaskInfo(offer *mesos.Offer, task *types.MyTask) (*types.MyTask, *mes
 		Container: &mesos.ContainerInfo{
 			Type: mesos.ContainerInfo_DOCKER.Enum(),
 			Docker: &mesos.ContainerInfo_DockerInfo{
-				Image: proto.String(task.Name),
+				Image: proto.String(task.Image),
 			},
 		},
 		Command: commandInfo,

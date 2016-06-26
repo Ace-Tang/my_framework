@@ -16,7 +16,7 @@ import (
 
 var (
 	filter = &mesos.Filters{
-		RefuseSeconds: proto.Float64(1),
+		RefuseSeconds: proto.Float64(10),
 	}
 )
 
@@ -24,8 +24,8 @@ type Myscheduler struct {
 	taskTotal    int
 	taskFrontEnd string
 	start        chan string
-	//	shutdown chan
-	db *store.Storage
+	shutdown     chan struct{}
+	db           *store.Storage
 }
 
 func NewMyScheduler(db *store.Storage) *Myscheduler {
@@ -34,7 +34,7 @@ func NewMyScheduler(db *store.Storage) *Myscheduler {
 		taskFrontEnd: strconv.FormatInt(time.Now().Unix(), 32),
 		start:        make(chan string, 1000),
 		db:           db,
-		//shutdown:
+		shutdown:     make(chan struct{}),
 	}
 }
 
@@ -59,12 +59,15 @@ loop:
 		var tasks []*mesos.TaskInfo
 
 		select {
+		case <-mysched.shutdown:
+			log.Printf("stop framework ....\n")
+			break loop
 		case tid := <-mysched.start:
 			task, err := mysched.db.GetTask(tid)
 			if err != nil {
 				log.Printf("unable to find task %v in db\n", tid)
 			}
-			log.Printf("try to launching task %s on slave %s", tid, task.Hostname)
+			log.Printf("try to launch task %s on slave %s", tid, task.Hostname)
 
 			var ok int = 0
 			var offer *mesos.Offer
@@ -187,6 +190,12 @@ func (mysched *Myscheduler) ScheduleTask(req *types.TaskRequest) {
 	}
 }
 
-func (mysched *Myscheduler) Stop() {
+/*
+func (mysched *Myscheduler) KillTask() {
 
+}
+*/
+
+func (mysched *Myscheduler) Stop() {
+	close(mysched.shutdown)
 }

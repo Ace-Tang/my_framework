@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"encoding/json"
 	_ "errors"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/golang/glog"
@@ -99,24 +100,39 @@ func (s *Storage) RmNode(hostname string) {
 
 func (s *Storage) PutTask(t *types.MyTask) {
 	//env will be array k:v
-	sql := "insert into `task_info` (`task_cpu`, `task_mem`, `id`, `cmd`, `env`, `image`, `hostname`, `name`, `status`, `count`) values (?,?,?,?,?,?,?,?,?,?,);"
-
-	_, err := s.db.Exec(sql, t.TaskCpu, t.TaskMem, t.ID, t.Cmd, t.Image, t.SlaveId, t.Hostname, t.Name, t.FrameworkId, t.Status, t.Count)
+	sql := "insert into `task_info` (`task_cpu`, `task_mem`, `id`, `cmd`, `env`, `image`, `hostname`, `name`, `status`, `count`, `slave_id`, `framework_id`) values (?,?,?,?,?,?,?,?,?,?,?,?);"
+	env, err := json.Marshal(t.Env)
 	if err != nil {
-		log.Println("insert to table slave_info : ", err)
+		log.Println("json Marshal error ", err)
+		return
+	}
+	env_str := string(env)
+
+	_, err = s.db.Exec(sql, t.TaskCpu, t.TaskMem, t.ID, t.Cmd, env_str, t.Image, t.Hostname, t.Name, t.Status, t.Count, t.SlaveId, t.FrameworkId)
+	if err != nil {
+		log.Println("insert to table task_info : ", err)
 	}
 }
 
 func (s *Storage) UpdateTask(id, slave_id, framework_id string) {
-	//sql := "update `task_info` set `slave_id`=" + slave_id + " and `framework_id`=" + framework_id + " where `id`=" + id + ";"
+	sql := "update `task_info` set `slave_id`=? and `framework_id`=? where `id`=?;"
+	_, err := s.db.Exec(sql, slave_id, framework_id, id)
+	if err != nil {
+		log.Printf("update task %v error %v\n", id, err)
+	}
 }
 
 func (s *Storage) UpdateTaskStatus(id, status string) {
-	//	sql := "update `task_info` set `status` =" + status + " where `id`=" + id + ";"
+	sql := "update `task_info` set `status` =? where `id`=?;"
+	_, err := s.db.Exec(sql, status, id)
+	if err != nil {
+		log.Printf("Update Task %v Status error %v\n", id, err)
+	}
+
 }
 
 func (s *Storage) GetTask(id string) (*types.MyTask, error) {
-	sql := "select `id`, `hostname`, `task_cpu`, `task_mem`, `count` from `task_info` where `id`=?;"
+	sql := "select `id`, `hostname`, `task_cpu`, `task_mem`, `count`, `cmd`, `env`, `image`, `name` from `task_info` where `id`=?;"
 	rows, err := s.db.Query(sql, id)
 	if err != nil {
 		log.Println("GetTask from db ", err)
@@ -124,7 +140,9 @@ func (s *Storage) GetTask(id string) (*types.MyTask, error) {
 	}
 	t := &types.MyTask{}
 	for rows.Next() {
-		rows.Scan(&t.ID, &t.Hostname, &t.TaskCpu, &t.TaskMem, &t.Count)
+		var env string
+		rows.Scan(&t.ID, &t.Hostname, &t.TaskCpu, &t.TaskMem, &t.Count, &t.Cmd, &env, &t.Image, &t.Name)
+		json.Unmarshal([]byte(env), &t.Env)
 	}
 
 	return t, nil

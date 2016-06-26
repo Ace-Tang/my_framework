@@ -10,16 +10,17 @@ import (
 	"my_framework/store"
 	"my_framework/types"
 	"os"
+	_ "os/signal"
 )
 
 var (
 	master  = flag.String("master", "IP:PORT", "master address")
 	address = flag.String("address", "localip", "address")
 	port    = flag.Uint("port", 10000, "framwork binding port")
-	webui   = flag.String("webui", "localhost:8080", "webui address")
+	webui   = flag.String("webui", "10.8.12.174:8080", "webui address")
 	name    = flag.String("name", "april", "framework name")
 	user    = flag.String("user", "root", "who can use framework")
-	db      = flag.String("db", "root@ace(127.0.0.1:3306)/mesos", "location of db")
+	db      = flag.String("db", "root:ace@tcp(127.0.0.1:3306)/mesos", "location of db")
 )
 
 func main() {
@@ -94,7 +95,7 @@ func main() {
 	//	if s != os.Interrupt || s != os.Kill {
 	//		return
 	//	}
-	//	scheduler.Stop()
+	//	mysched.Stop()
 	//}()
 
 	hander := route.NewHander(*webui)
