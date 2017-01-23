@@ -58,6 +58,7 @@ func (mysched *Myscheduler) ResourceOffers(driver sched.SchedulerDriver, offers 
 	glog.Infof("receive %d offers\n", len(offers))
 
 loop:
+	time.Sleep(20 * time.Second)
 	for len(offers) > 0 {
 
 		var tasks []*mesos.TaskInfo
@@ -78,7 +79,7 @@ loop:
 			for _, offer = range offers {
 				remainingCpus := getOfferRes("cpus", offer)
 				remainingMem := getOfferRes("mem", offer)
-				glog.Infof("receiced offer %v with cpus %v, memory %v\n", offer.Id.GetValue(), remainingCpus, remainingMem)
+				glog.Infof("receiced offer %v with cpus %v, memory %v\n", offer.GetHostname(), remainingCpus, remainingMem)
 
 				if *(offer.Hostname) == task.Hostname &&
 					int(remainingCpus) > int(task.TaskCpu)*task.Count &&
