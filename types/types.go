@@ -11,7 +11,7 @@ type MyTask struct {
 	Hostname    string            `json:"hostname"`
 	Name        string            `json:"name"`
 	FrameworkId string            `json:"framework_id"`
-	Status      string            `json:"status"`
+	Status      int               `json:"status"`
 	Count       int               `json:"count"`
 }
 

@@ -1,13 +1,14 @@
 package scheduler
 
 import (
-	"github.com/gogo/protobuf/proto"
-	mesos "github.com/mesos/mesos-go/mesosproto"
-	"github.com/mesos/mesos-go/mesosutil"
 	"log"
 	"my_framework/types"
 	"strconv"
 	"time"
+
+	"github.com/gogo/protobuf/proto"
+	mesos "github.com/mesos/mesos-go/mesosproto"
+	"github.com/mesos/mesos-go/mesosutil"
 )
 
 func NewMyTask(req *types.TaskRequest, taskTotal int, taskFrontEnd string) *types.MyTask {
@@ -22,7 +23,6 @@ func NewMyTask(req *types.TaskRequest, taskTotal int, taskFrontEnd string) *type
 		Name:     req.Name,
 		Count:    req.Count,
 		Hostname: req.Hostname,
-		Status:   mesos.TaskState_TASK_STAGING.String(),
 	}
 }
 

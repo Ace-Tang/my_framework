@@ -2,8 +2,9 @@ package main
 
 import (
 	"database/sql"
-	_ "github.com/go-sql-driver/mysql"
 	"log"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
@@ -54,7 +55,7 @@ func create() error {
 		log.Println("create table slave_info ", err)
 	}
 
-	sql = "create table task_info ( task_cpu float not null, task_mem float not null, id varchar(255) primary key, name varchar(20) not null, cmd varchar(255) , env varchar(255), image varchar(50) not null, slave_id varchar(255), hostname varchar(20) not null, framework_id varchar(255), status varchar(20), count int not null)"
+	sql = "create table task_info ( task_cpu float not null, task_mem float not null, id varchar(255) primary key, name varchar(20) not null, cmd varchar(255)  not null, env varchar(255)  not null, image varchar(50) not null, slave_id varchar(255)  not null, hostname varchar(20) not null, framework_id varchar(255), status int not null, count int not null)"
 	_, err = db.Exec(sql)
 	if err != nil {
 		log.Println("create table task_info ", err)

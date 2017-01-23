@@ -1,21 +1,23 @@
 package route
 
 import (
-	"github.com/emicklei/go-restful"
-	_ "github.com/emicklei/go-restful/swagger"
-	_ "github.com/golang/glog"
 	"log"
+	sched "my_framework/scheduler"
 	"my_framework/store" //has mysql
 	"my_framework/types"
 	"net/http"
+
+	restful "github.com/emicklei/go-restful"
+	_ "github.com/emicklei/go-restful/swagger"
+	_ "github.com/golang/glog"
 )
 
 type RouteManage struct {
 	db    *store.Storage
-	sched types.Scheduler //Scheduler.go already has this package, so we use interface
+	sched *sched.Myscheduler //Scheduler.go already has this package, so we use interface
 }
 
-func NewRouteManage(db *store.Storage, mysched types.Scheduler) *RouteManage {
+func NewRouteManage(db *store.Storage, mysched *sched.Myscheduler) *RouteManage {
 	return &RouteManage{
 		db:    db,
 		sched: mysched,
@@ -108,6 +110,7 @@ func (r *RouteManage) descTask(req *restful.Request, resp *restful.Response) {
 
 func (r *RouteManage) rmTask(req *restful.Request, resp *restful.Response) {
 	id := req.QueryParameter("id")
+	r.sched.KillTask(id)
 	r.db.RmTask(id)
 	//tell scheduler
 }

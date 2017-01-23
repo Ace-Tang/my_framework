@@ -1,6 +1,6 @@
 package types
 
 type Scheduler interface {
-	ScheduleTask(req *TaskRequest)
+	//ScheduleTask(req *TaskRequest)
 	//	KillTask(id string)
 }

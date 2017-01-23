@@ -4,14 +4,15 @@ import (
 	"strconv"
 	"time"
 
+	"log"
+	store "my_framework/store"
+	"my_framework/types"
+
 	"github.com/gogo/protobuf/proto"
 	_ "github.com/golang/glog"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	"github.com/mesos/mesos-go/mesosutil"
 	sched "github.com/mesos/mesos-go/scheduler"
-	"log"
-	store "my_framework/store"
-	"my_framework/types"
 )
 
 var (
@@ -21,6 +22,8 @@ var (
 )
 
 type Myscheduler struct {
+	mesosDriver  sched.SchedulerDriver
+	taskSet      map[string]*types.MyTask // map[TaskId]Hostname
 	taskTotal    int
 	taskFrontEnd string
 	start        chan string
@@ -38,12 +41,14 @@ func NewMyScheduler(db *store.Storage) *Myscheduler {
 	}
 }
 
-func (mysched *Myscheduler) Registered(_ sched.SchedulerDriver, frameworkId *mesos.FrameworkID, masterInfo *mesos.MasterInfo) {
+func (mysched *Myscheduler) Registered(driver sched.SchedulerDriver, frameworkId *mesos.FrameworkID, masterInfo *mesos.MasterInfo) {
 	log.Printf("scheduler register mesos with framework id %s, master id %s", frameworkId.GetValue(), masterInfo.GetId())
+	mysched.mesosDriver = driver
 }
 
-func (mysched *Myscheduler) Reregistered(_ sched.SchedulerDriver, masterInfo *mesos.MasterInfo) {
+func (mysched *Myscheduler) Reregistered(driver sched.SchedulerDriver, masterInfo *mesos.MasterInfo) {
 	log.Println("scheduler reregister mesos ", masterInfo)
+	mysched.mesosDriver = driver
 }
 
 func (mysched *Myscheduler) Disconnected(driver sched.SchedulerDriver) {
@@ -123,10 +128,12 @@ func (mysched *Myscheduler) StatusUpdate(_ sched.SchedulerDriver, status *mesos.
 	taskStatus := status.GetState()
 	id := status.TaskId.GetValue()
 
-	_, err := mysched.db.GetTask(id)
-	if err != nil {
-		log.Printf("unable to find task %v in db\n", id)
+	t, exist := mysched.taskSet[id]
+	if !exist {
+		log.Printf("task %v not in memory\n", id)
+		return
 	}
+	t.Status = converTaskStatus(status.GetState())
 
 	state := status.State.String()
 	if taskStatus == mesos.TaskState_TASK_KILLED ||
@@ -190,11 +197,23 @@ func (mysched *Myscheduler) ScheduleTask(req *types.TaskRequest) {
 	}
 }
 
-/*
-func (mysched *Myscheduler) KillTask() {
+func (mysched *Myscheduler) KillTask(taskId string) {
+	t, exist := mysched.taskSet[taskId]
+	if !exist {
+		log.Printf("task %s not exist in memory\n", taskId)
+		return
+	}
 
+	if t.Status != ContainerTaskState_RUNNING {
+		log.Printf("task %s not running, do not need kill\n", taskId)
+		return
+	}
+	_, err := mysched.mesosDriver.KillTask(mesosutil.NewTaskID(taskId))
+	if err != nil {
+		log.Printf("kill task %s error %v\n", taskId, err)
+	}
+	log.Printf("kill task %s successful\n", taskId)
 }
-*/
 
 func (mysched *Myscheduler) Stop() {
 	close(mysched.shutdown)
