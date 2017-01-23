@@ -1,20 +1,20 @@
 package scheduler
 
 import (
-	"github.com/gogo/protobuf/proto"
-	_ "github.com/golang/glog"
-	mesos "github.com/mesos/mesos-go/mesosproto"
-	sched "github.com/mesos/mesos-go/scheduler"
-	"log"
 	"my_framework/types"
 	"net"
 	"os"
+
+	"github.com/gogo/protobuf/proto"
+	"github.com/golang/glog"
+	mesos "github.com/mesos/mesos-go/mesosproto"
+	sched "github.com/mesos/mesos-go/scheduler"
 )
 
 func RunScheduler(mysched *Myscheduler, cfg *types.Config) {
 	bindingAddress := net.ParseIP(cfg.Address)
 	if bindingAddress == nil {
-		log.Println("Error parse IP from ", cfg.Address)
+		glog.Infoln("Error parse IP from ", cfg.Address)
 		os.Exit(-1)
 	}
 	driver, err := sched.NewMesosSchedulerDriver(sched.DriverConfig{
@@ -29,7 +29,7 @@ func RunScheduler(mysched *Myscheduler, cfg *types.Config) {
 	})
 
 	if err != nil {
-		log.Println("Create Scheduler ", err)
+		glog.Infoln("Create Scheduler ", err)
 		os.Exit(-1)
 	}
 
@@ -39,6 +39,6 @@ func RunScheduler(mysched *Myscheduler, cfg *types.Config) {
 	}()
 
 	if stat, err := driver.Run(); err != nil {
-		log.Println("Framework stop with Status %s and err %s\n", stat.String(), err.Error())
+		glog.Infoln("Framework stop with Status %s and err %s\n", stat.String(), err.Error())
 	}
 }

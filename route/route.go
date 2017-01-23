@@ -1,7 +1,6 @@
 package route
 
 import (
-	"log"
 	sched "my_framework/scheduler"
 	"my_framework/store" //has mysql
 	"my_framework/types"
@@ -9,7 +8,7 @@ import (
 
 	restful "github.com/emicklei/go-restful"
 	_ "github.com/emicklei/go-restful/swagger"
-	_ "github.com/golang/glog"
+	"github.com/golang/glog"
 )
 
 type RouteManage struct {
@@ -146,7 +145,7 @@ func (r *RouteManage) addSlaves(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	log.Println("add node to my_framework ", args)
+	glog.Infoln("add node to my_framework ", args)
 	r.db.AddNode(&args)
 }
 

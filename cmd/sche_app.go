@@ -2,15 +2,14 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	_ "github.com/golang/glog"
-	"log"
 	"my_framework/route"
 	scheduler "my_framework/scheduler"
 	"my_framework/store"
 	"my_framework/types"
 	"os"
 	_ "os/signal"
+
+	"github.com/golang/glog"
 )
 
 var (
@@ -63,12 +62,11 @@ func main() {
 	storage := store.NewStorage(*db)
 	err := storage.Open()
 	if err != nil {
-		log.Println("open mysql ", err)
+		glog.Errorln("open mysql ", err)
 		os.Exit(-1)
 	}
-	fmt.Println("after db")
-	log.Println("open mysql ", err)
-	log.Println("open database on ", *db)
+	glog.Infoln("open mysql ", err)
+	glog.Infoln("open database on ", *db)
 	defer storage.Close()
 
 	cfg := &types.Config{

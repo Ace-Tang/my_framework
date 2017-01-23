@@ -1,12 +1,12 @@
 package scheduler
 
 import (
-	"log"
 	"my_framework/types"
 	"strconv"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/golang/glog"
 	mesos "github.com/mesos/mesos-go/mesosproto"
 	"github.com/mesos/mesos-go/mesosutil"
 )
@@ -28,7 +28,7 @@ func NewMyTask(req *types.TaskRequest, taskTotal int, taskFrontEnd string) *type
 
 func CreateTaskInfo(offer *mesos.Offer, task *types.MyTask) (*types.MyTask, *mesos.TaskInfo) {
 	//	task.Hostname = *offer.Hostname
-	log.Printf("task : %+v\n", task)
+	glog.Infof("task : %+v\n", task)
 	task.SlaveId = offer.SlaveId.GetValue()
 	task.FrameworkId = offer.FrameworkId.GetValue()
 
