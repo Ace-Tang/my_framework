@@ -3,6 +3,8 @@ bin:
 
 build: bin/myframework
 
+
+
 bin/myframework: bin
 	go build -o cmd/sche_app.go bin/myframework
 
